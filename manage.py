@@ -18,4 +18,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    from game.apps import GameOfLife, GUI
+    game = GUI(GameOfLife((20, 15)))
+    game.run()
+    #main()
