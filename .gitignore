@@ -1,4 +1,4 @@
-# django migrations 
+# Django migrations 
 **/migrations/**
 !**/migrations
 !**/migrations/__init__.py
@@ -7,3 +7,6 @@
 __pycache__/
 *.py[cod]
 *$py.class
+
+# Env
+.env/
