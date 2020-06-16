@@ -47,7 +47,7 @@ class GameOfLife:
                 settings: GameSettings=GameSettings()):
         self.settings = settings
         self.cols, self.rows = size
-        self.__winner = 0
+        self.__winner = [0]
         self.players_queue = []
         for p in range(1, self.settings.players_number + 1):
             self.players_queue.append(p)
@@ -85,7 +85,7 @@ class GameOfLife:
             self.cur_round += 1
             self.cur_round_generation = 1
             if self.IsOver:
-                self.logger.info('Game over. Winner: {}'.format(self.Winner))
+                self.logger.info('Game over. {}'.format(self.Winner))
                 return
             self.logger.info('Round {} ended. Current leader: {}'.format(self.cur_round - 1, self.Winner))
             random.shuffle(self.players_queue)
@@ -180,10 +180,14 @@ class GameOfLife:
             for x in range(self.cols):
                 if self.grid[y][x] > 0:
                     counts[self.grid[y][x]] += 1
-        self.__winner = 0
+        self.__winner = [0]
         for p in range(1, self.settings.players_number + 1):
-            if counts[p] > counts[self.__winner]:
-                self.__winner = p
+            if counts[p] == 0:
+                continue
+            if counts[p] > counts[self.__winner[0]]:
+                self.__winner = [p]
+            elif counts[p] == counts[self.__winner[0]]:
+                self.__winner.append(p)
     
     
     @property
@@ -192,4 +196,7 @@ class GameOfLife:
     
     @property
     def Winner(self) -> str:
-        return 'Player {}'.format(self.__winner) if self.__winner > 0 else 'None'
+        if len(self.__winner) > 1:
+            return 'Draw between players {}'.format(', '.join(str(p) for p in self.__winner))
+        else:
+            return 'Winner: player {}'.format(self.__winner[0]) if self.__winner[0] > 0 else 'All life was lost'

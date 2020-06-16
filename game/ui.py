@@ -15,7 +15,9 @@ class GUI():
         menu = Menu(self.root)
         menu.add_command(label='New game', command=self.__newGamePopup)
         menu.add_command(label='Exit', command=self.__appQuit)
-        menu.add_command(label='                ', command=self.__toggleCon)
+        # Space to separate status. Not the most elegant solution, I know
+        menu.add_command(label='                ')
+        # Status label
         menu.add_command(label=' ')
         self.root.config(menu=menu)
         self.menu = menu
@@ -31,12 +33,15 @@ class GUI():
         self.game_settings = GameSettings()
         self.ng_window = None
         self.app_running = True
+        self.game_in_process = False
         while self.app_running:
             self.root.update_idletasks()
             self.root.update()
     
 
     def __newGamePopup(self):
+        if self.game_in_process:
+            return
         if not self.ng_window is None:
             self.ng_window.destroy()
         self.ng_window = Toplevel(self.root)
@@ -76,7 +81,7 @@ class GUI():
             self.__drawGrid()
             self.__drawLines()
             self.__refreshFrame()
-        self.__setStatus('Winner: {}'.format(self.game.Winner))
+        self.__setStatus(self.game.Winner)
     
     def __setGameSettings(self):
         for param in self.game_params_entries:
@@ -132,11 +137,6 @@ class GUI():
                                             self.__getCellColor(p),
                                             (x*self.cell_size, y*self.cell_size, self.cell_size, self.cell_size))
                 self.__refreshFrame()
-    
-    def __toggleCon(self):
-        self.need_con = not self.need_con
-        lbl = 'Continue' if self.need_con else '                '
-        self.menu.entryconfigure(3, label=lbl)
     
     def __setStatus(self, status):
         self.menu.entryconfigure(4, label=status)
