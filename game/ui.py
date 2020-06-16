@@ -15,7 +15,10 @@ from pygame.locals import *
 
 class GUI(UI):
 
-    def __init__(self, game: GameOfLife, cell_size: int=20, speed: int=10):
+    def __init__(self,
+                game: GameOfLife,
+                cell_size: int=20,
+                speed: int=10):
         self.game = game
         self.cell_size = cell_size if 10 <= cell_size <= 40 else 20
         self.width = self.game.cols * self.cell_size
@@ -56,7 +59,7 @@ class GUI(UI):
                 self.__drawLines()
                 pygame.display.flip()
                 clock.tick(self.speed)
-                running = self.game.IsNotEnded
+                #running = not self.game.IsOver
         pygame.quit()
     
 
@@ -76,7 +79,9 @@ class GUI(UI):
         color = ""
         for y in range(self.game.rows):
             for x in range(self.game.cols):
-                pygame.draw.rect(self.screen, self.__getCellColor(self.game.cur_generation[y][x]), (x*self.cell_size, y*self.cell_size, self.cell_size, self.cell_size))
+                pygame.draw.rect(self.screen,
+                                self.__getCellColor(self.game.grid[y][x]),
+                                (x*self.cell_size, y*self.cell_size, self.cell_size, self.cell_size))
     
     def __getCellColor(self, cell_value):
         colors = ['black', 'red', 'green', 'blue', 'yellow', 'purple']

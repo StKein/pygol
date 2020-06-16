@@ -1,5 +1,5 @@
 from django.test import TestCase
-from logic import GameSettings, GameOfLife
+from .logic import GameSettings, GameOfLife
 
 # Create your tests here.
 class GameOfLifeTestCase(TestCase):
@@ -13,11 +13,9 @@ class GameOfLifeTestCase(TestCase):
             cells.append(0)
         for y in range(self.game.rows):
             for x in range(self.game.cols):
-                cells[self.game.cur_generation[y][x]] += 1
+                cells[self.game.grid[y][x]] += 1
         for i in range(1, len(cells)):
             self.assertEqual(cells[i], self.game.settings.new_cells_per_round)
-        for i in range(self.game.rows):
-            print(self.game.cur_generation[i])
 
     def test_getACCPNeighborsCount(self):
         self.__setManualGrid()
@@ -76,36 +74,37 @@ class GameOfLifeTestCase(TestCase):
     
     def test_ManualCases(self):
         game = GameOfLife(size=(5,5), settings=GameSettings(players_number=1, new_cells_per_round=5))
-        game.cur_generation_num = 1
-        game.cur_generation = [
+        game.cur_round = 1
+        game.cur_round_generation = 1
+        game.grid = [
             [0,0,0,0,0],
             [0,0,0,0,0],
             [0,1,1,1,0],
             [0,0,0,0,0],
             [0,0,0,0,0],
         ]
-        game.prev_generation = game._GameOfLife__createGrid()
         game.Move()
-        cur_gen = [
+        grid = [
             [0,0,0,0,0],
             [0,0,1,0,0],
             [0,0,1,0,0],
             [0,0,1,0,0],
             [0,0,0,0,0],
         ]
-        self.assertEqual(game.cur_generation, cur_gen)
+        self.assertEqual(game.grid, grid)
         game.Move()
-        cur_gen = [
+        grid = [
             [0,0,0,0,0],
             [0,0,0,0,0],
             [0,1,1,1,0],
             [0,0,0,0,0],
             [0,0,0,0,0],
         ]
-        self.assertEqual(game.cur_generation, cur_gen)
+        self.assertEqual(game.grid, grid)
 
         game.cols = 6
-        game.cur_generation = [
+        game.cur_round_generation = 1
+        game.grid = [
             [0,0,0,0,0,0],
             [0,0,1,1,0,0],
             [0,1,0,0,1,0],
@@ -113,18 +112,18 @@ class GameOfLifeTestCase(TestCase):
             [0,0,0,0,0,0],
         ]
         game.Move()
-        cur_gen = [
+        grid = [
             [0,0,0,0,0,0],
             [0,0,1,1,0,0],
             [0,1,0,0,1,0],
             [0,0,1,1,0,0],
             [0,0,0,0,0,0],
         ]
-        self.assertEqual(game.cur_generation, cur_gen)
+        self.assertEqual(game.grid, grid)
     
     
     def __setManualGrid(self):
-        self.game.cur_generation = [
+        self.game.grid = [
             [1,0,0,0,0,0,2,2,0,0],
             [0,1,1,0,0,2,2,0,0,0],
             [1,1,0,0,0,0,1,2,0,0],

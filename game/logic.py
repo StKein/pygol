@@ -1,17 +1,26 @@
 class GameSettings:
-    __slots__ = ('players_number', 'generations_per_round', 'new_cells_per_round')
+    __slots__ = ('players_number', 'rounds_number', 'generations_per_round', 'new_cells_per_round')
 
-    def __init__(self, players_number: int=2, generations_per_round: int=0, new_cells_per_round: int=20):
-        self.players_number = players_number if 1 <= players_number <= 5 else 1;
-        self.new_cells_per_round = new_cells_per_round if 10 <= new_cells_per_round <= 100 else 10;
-        # TODO: remove infinite generations possibility when game gets to required format
-        self.generations_per_round = generations_per_round if 0 <= generations_per_round <= 50 else 0
+    def __init__(self,
+                players_number: int=2,
+                generations_per_round: int=10,
+                rounds_number = 10,
+                new_cells_per_round: int=20):
+        self.players_number = players_number if 1 <= players_number <= 5 else 2
+        self.generations_per_round = generations_per_round if 0 < generations_per_round <= 50 else 10
+        self.rounds_number = rounds_number if 1 <= rounds_number <= 30 else 10
+        self.new_cells_per_round = new_cells_per_round if 10 <= new_cells_per_round <= 100 else 20
 
+
+import time
 
 class GameOfLife:
-    __slots__ = ('settings', 'cols', 'rows', 'prev2_generation', 'prev_generation', 'cur_generation', 'cur_generation_num', 'cur_player')
+    __slots__ = ('settings', 'cols', 'rows', 'grid', 'winner',
+                'cur_round', 'cur_round_generation', 'cur_player')
 
-    def __init__(self, size: (int, int)=(20,20), settings: GameSettings=GameSettings()):
+    def __init__(self,
+                size: (int, int)=(30,20),
+                settings: GameSettings=GameSettings()):
         self.settings = settings
         self.cols, self.rows = size
         # if field is too small, increase it
@@ -22,52 +31,61 @@ class GameOfLife:
     def Start(self):
         """
             Game startup preparations:
-                * create "dead" prevgen grid
                 * create active grid
                 * set startup generation number
         """
-        self.prev2_generation = self.__createGrid()
-        self.prev_generation = self.prev2_generation
-        self.cur_generation = self.__createGrid(auto_fill=True)
-        self.cur_generation_num = 1
+        self.cur_round = 1
+        self.cur_round_generation = 1
+        self.__resetGrid()
+        self.__autoAddRoundCells()
     
     def Move(self):
         """
+            Game move
             Generation step
             Each player's cells make a move
-            Then the board is refreshed to show new state
+            Then the grid is refreshed to show new state
         """
-        self.prev2_generation = self.prev_generation
-        self.prev_generation = self.cur_generation
+        # Just in case
+        if self.IsOver:
+            return
+        
         for p in range(1, self.settings.players_number + 1):
             self.cur_player = p
             self.__playerMove()
-        self.cur_generation_num += 1
-        pass
+        self.cur_round_generation += 1
+        if self.cur_round_generation > self.settings.generations_per_round:
+            # TODO: log endround players' cells count
+            self.cur_round += 1
+            self.cur_round_generation = 1
+            if self.IsOver:
+                self.__setWinner()
+                return
+            time.sleep(0.5)
+            self.__autoAddRoundCells()
     
-    
-    def __createGrid(self, auto_fill: bool=False):
-        """
-            Creates new board grid
-            TODO: move filling part to 'addNewCells'
-            TODO: when manual start cells setup ready, remove auto_fill
-        """
-        grid = []
+
+    """ Reset game grid """
+    def __resetGrid(self, auto_fill: bool=False):
+        self.grid = []
         for y in range(self.rows):
-            grid.append([])
+            self.grid.append([])
             for x in range(self.cols):
-                grid[y].append(0)
-        if auto_fill:
-            import random
-            for player in range(1, self.settings.players_number + 1):
-                x = -1
-                y = -1
-                for n in range(self.settings.new_cells_per_round):
-                    while x == -1 or grid[y][x] != 0:
-                        x = random.randint(0, self.cols - 1)
-                        y = random.randint(0, self.rows - 1)
-                    grid[y][x] = player
-        return grid
+                self.grid[y].append(0)
+    
+    """ Filler method. Add random X cells for each player """
+    def __autoAddRoundCells(self):
+        import random
+        grid = self.grid
+        x = -1
+        y = -1
+        for player in range(1, self.settings.players_number + 1):
+            for n in range(self.settings.new_cells_per_round):
+                while x == -1 or grid[y][x] != 0:
+                    x = random.randint(0, self.cols - 1)
+                    y = random.randint(0, self.rows - 1)
+                grid[y][x] = player
+        self.grid = grid
     
     # ACCP = Alive Cell of Current Player
     """ Get count of cell's neighbors that are ACCP """
@@ -76,12 +94,12 @@ class GameOfLife:
         for y in range(cell_y - 1, cell_y + 2):
             for x in range(cell_x - 1, cell_x + 2):
                 if x != cell_x or y != cell_y:
-                    count += (self.cur_generation[y % self.rows][x % self.cols] == self.cur_player)
+                    count += (self.grid[y % self.rows][x % self.cols] == self.cur_player)
         return count
     
     """ Get status of cell after current player's move """
     def __getCellNewStatus(self, cell_x, cell_y):
-        c = self.cur_generation[cell_y][cell_x]
+        c = self.grid[cell_y][cell_x]
         neighbors = self.__getACCPNeighborsCount(cell_x, cell_y)
         """
             if cell is ACCP:
@@ -103,24 +121,31 @@ class GameOfLife:
                 c = self.cur_player
         return c
     
-    """ Process move of current playe, update curgen grid accordingly """
+    """ Process move of current player, update grid accordingly """
     def __playerMove(self):
         grid = []
         for y in range(self.rows):
             grid.append([])
             for x in range(self.cols):
                 grid[y].append(self.__getCellNewStatus(x, y))
-        self.cur_generation = grid
+        self.grid = grid
+    
+    """ Set game winner """
+    def __setWinner(self):
+        counts = [0]
+        for p in range(self.settings.players_number):
+            counts.append(0)
+        for y in range(self.rows):
+            for x in range(self.cols):
+                if self.grid[y][x] > 0:
+                    counts[self.grid[y][x]] += 1
+        self.winner = 0
+        for p in range(1, self.settings.players_number + 1):
+            if counts[p] > counts[self.winner]:
+                self.winner = p
+        # TODO: log winner message
     
     
     @property
-    def IsNotEnded(self) -> bool:
-        return not (self.__maxGenerationsExceeded or not self.__generationIsChanging)
-    
-    @property
-    def __maxGenerationsExceeded(self) -> bool:
-        return self.settings.generations_per_round != 0 and self.cur_generation_num > self.settings.generations_per_round
-    
-    @property
-    def __generationIsChanging(self) -> bool:
-        return self.cur_generation != self.prev_generation and self.cur_generation != self.prev2_generation
+    def IsOver(self) -> bool:
+        return self.cur_round > self.settings.rounds_number
