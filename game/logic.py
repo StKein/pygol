@@ -6,10 +6,10 @@ class GameSettings:
                 generations_per_round: int=10,
                 rounds_number = 10,
                 new_cells_per_round: int=20):
-        self.players_number = players_number if 1 <= players_number <= 5 else 2
-        self.generations_per_round = generations_per_round if 0 < generations_per_round <= 50 else 10
-        self.rounds_number = rounds_number if 1 <= rounds_number <= 30 else 10
-        self.new_cells_per_round = new_cells_per_round if 10 <= new_cells_per_round <= 100 else 20
+        self.players_number = players_number
+        self.generations_per_round = generations_per_round
+        self.rounds_number = rounds_number
+        self.new_cells_per_round = new_cells_per_round
     
     def __setattr__(self, name, val):
         if not name in self.__slots__:
@@ -28,23 +28,31 @@ class GameSettings:
         elif name == 'rounds_number':
             is_valid = 1 <= val <= 30
         elif name == 'new_cells_per_round':
-            is_valid = 10 <= val <= 100
+            is_valid = 5 <= val <= 100
         
         if is_valid:
             super().__setattr__(name, val)
 
 
+import logging
+import random
 import time
 
 class GameOfLife:
-    __slots__ = ('settings', 'cols', 'rows', 'grid', 'winner',
-                'cur_round', 'cur_round_generation', 'cur_player')
+    __slots__ = ('settings', 'cols', 'rows', 'grid', '__winner', 'logger',
+                'cur_round', 'cur_round_generation', 'cur_player', 'players_queue')
 
     def __init__(self,
                 size: (int, int)=(30,20),
                 settings: GameSettings=GameSettings()):
         self.settings = settings
         self.cols, self.rows = size
+        self.__winner = [0]
+        self.players_queue = []
+        for p in range(1, self.settings.players_number + 1):
+            self.players_queue.append(p)
+        random.shuffle(self.players_queue)
+        self.__setLogger()
     
     def Start(self):
         """
@@ -52,10 +60,10 @@ class GameOfLife:
                 * create active grid
                 * set startup generation number
         """
+        self.logger.info('Game for {} players started'.format(self.settings.players_number))
         self.cur_round = 1
         self.cur_round_generation = 1
         self.__resetGrid()
-        self.__autoAddRoundCells()
     
     def Move(self):
         """
@@ -68,23 +76,38 @@ class GameOfLife:
         if self.IsOver:
             return
         
-        for p in range(1, self.settings.players_number + 1):
+        for p in self.players_queue:
             self.cur_player = p
             self.__playerMove()
         self.cur_round_generation += 1
         if self.cur_round_generation > self.settings.generations_per_round:
-            # TODO: log endround players' cells count
+            self.__setWinner()
             self.cur_round += 1
             self.cur_round_generation = 1
             if self.IsOver:
-                self.__setWinner()
+                self.logger.info('Game over. {}'.format(self.Winner))
                 return
-            time.sleep(0.5)
-            self.__autoAddRoundCells()
+            self.logger.info('Round {} ended. Current leader: {}'.format(self.cur_round - 1, self.Winner))
+            random.shuffle(self.players_queue)
+    
+    def AddCell(self, player: int, cell_x: int, cell_y: int) -> bool:
+        if self.grid[cell_y][cell_x] != 0:
+            return False
+        
+        self.grid[cell_y][cell_x] = player
+        return True
     
 
+    def __setLogger(self):
+        self.logger = logging.getLogger('GameOfLife')
+        handler = logging.FileHandler('logs/game.log')
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+        self.logger.addHandler(handler)
+        self.logger.setLevel('INFO')
+        self.logger.propagate = False
+    
     """ Reset game grid """
-    def __resetGrid(self, auto_fill: bool=False):
+    def __resetGrid(self):
         self.grid = []
         for y in range(self.rows):
             self.grid.append([])
@@ -93,11 +116,10 @@ class GameOfLife:
     
     """ Filler method. Add random X cells for each player """
     def __autoAddRoundCells(self):
-        import random
         grid = self.grid
         x = -1
         y = -1
-        for player in range(1, self.settings.players_number + 1):
+        for player in self.players_queue:
             for n in range(self.settings.new_cells_per_round):
                 while x == -1 or grid[y][x] != 0:
                     x = random.randint(0, self.cols - 1)
@@ -147,6 +169,7 @@ class GameOfLife:
             for x in range(self.cols):
                 grid[y].append(self.__getCellNewStatus(x, y))
         self.grid = grid
+
     
     """ Set game winner """
     def __setWinner(self):
@@ -157,13 +180,23 @@ class GameOfLife:
             for x in range(self.cols):
                 if self.grid[y][x] > 0:
                     counts[self.grid[y][x]] += 1
-        self.winner = 0
+        self.__winner = [0]
         for p in range(1, self.settings.players_number + 1):
-            if counts[p] > counts[self.winner]:
-                self.winner = p
-        # TODO: log winner message
+            if counts[p] == 0:
+                continue
+            if counts[p] > counts[self.__winner[0]]:
+                self.__winner = [p]
+            elif counts[p] == counts[self.__winner[0]]:
+                self.__winner.append(p)
     
     
     @property
     def IsOver(self) -> bool:
         return self.cur_round > self.settings.rounds_number
+    
+    @property
+    def Winner(self) -> str:
+        if len(self.__winner) > 1:
+            return 'Draw between players {}'.format(', '.join(str(p) for p in self.__winner))
+        else:
+            return 'Winner: player {}'.format(self.__winner[0]) if self.__winner[0] > 0 else 'All life was lost'
