@@ -1,21 +1,21 @@
 from django.test import TestCase
-from .apps import GameOfLife
+from logic import GameSettings, GameOfLife
 
 # Create your tests here.
 class GameOfLifeTestCase(TestCase):
     def setUp(self):
-        self.game = GameOfLife(size=(10,6), players_number=4, player_start_cells=20)
+        self.game = GameOfLife(size=(10,6), settings=GameSettings(players_number=4, new_cells_per_round=20))
     
     def test_createGrid(self):
         self.game.Start()
         cells = []
-        for i in range(self.game.players_number + 1):
+        for i in range(self.game.settings.players_number + 1):
             cells.append(0)
         for y in range(self.game.rows):
             for x in range(self.game.cols):
                 cells[self.game.cur_generation[y][x]] += 1
         for i in range(1, len(cells)):
-            self.assertEqual(cells[i], self.game.player_start_cells)
+            self.assertEqual(cells[i], self.game.settings.new_cells_per_round)
         for i in range(self.game.rows):
             print(self.game.cur_generation[i])
 
@@ -75,7 +75,7 @@ class GameOfLifeTestCase(TestCase):
                 self.assertEqual(self.game._GameOfLife__getCellNewStatus(x, y), grid_next_state[y][x])
     
     def test_ManualCases(self):
-        game = GameOfLife(size=(5,5), players_number=1, player_start_cells=5)
+        game = GameOfLife(size=(5,5), settings=GameSettings(players_number=1, new_cells_per_round=5))
         game.cur_generation_num = 1
         game.cur_generation = [
             [0,0,0,0,0],
@@ -84,6 +84,7 @@ class GameOfLifeTestCase(TestCase):
             [0,0,0,0,0],
             [0,0,0,0,0],
         ]
+        game.prev_generation = game._GameOfLife__createGrid()
         game.Move()
         cur_gen = [
             [0,0,0,0,0],

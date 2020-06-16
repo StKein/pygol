@@ -1,3 +1,4 @@
-from apps import GameOfLife, GUI
-game = GUI(game=GameOfLife(size=(20, 15), players_number=5, player_start_cells=100), speed=10)
-game.Run()
+from logic import GameSettings, GameOfLife
+from ui import GUI
+
+GUI(game=GameOfLife(size=(20, 15), settings=GameSettings(players_number=5, new_cells_per_round=100)), speed=10).Run()
