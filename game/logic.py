@@ -34,11 +34,12 @@ class GameSettings:
             super().__setattr__(name, val)
 
 
+import logging
 import random
 import time
 
 class GameOfLife:
-    __slots__ = ('settings', 'cols', 'rows', 'grid', 'winner',
+    __slots__ = ('settings', 'cols', 'rows', 'grid', '__winner', 'logger',
                 'cur_round', 'cur_round_generation', 'cur_player', 'players_queue')
 
     def __init__(self,
@@ -46,9 +47,11 @@ class GameOfLife:
                 settings: GameSettings=GameSettings()):
         self.settings = settings
         self.cols, self.rows = size
+        self.__winner = 0
         self.players_queue = []
         for p in range(1, self.settings.players_number + 1):
             self.players_queue.append(p)
+        self.__setLogger()
     
     def Start(self):
         """
@@ -56,6 +59,7 @@ class GameOfLife:
                 * create active grid
                 * set startup generation number
         """
+        self.logger.info('Game for {} players started'.format(self.settings.players_number))
         self.cur_round = 1
         self.cur_round_generation = 1
         self.__resetGrid()
@@ -78,18 +82,27 @@ class GameOfLife:
             self.__playerMove()
         self.cur_round_generation += 1
         if self.cur_round_generation > self.settings.generations_per_round:
-            # TODO: log endround players' cells count
+            self.__setWinner()
             self.cur_round += 1
             self.cur_round_generation = 1
             if self.IsOver:
-                self.__setWinner()
+                self.logger.info('Game over. Winner: {}'.format(self.Winner))
                 return
+            self.logger.info('Round {} ended. Current leader: {}'.format(self.cur_round - 1, self.Winner))
             # TODO: remove sleep when manual cells adding is implemented
             time.sleep(0.5)
             random.shuffle(self.players_queue)
             self.__autoAddRoundCells()
     
 
+    def __setLogger(self):
+        self.logger = logging.getLogger('GameOfLife')
+        handler = logging.FileHandler('logs/game.log')
+        handler.setFormatter(logging.Formatter('%(asctime)s - %(message)s'))
+        self.logger.addHandler(handler)
+        self.logger.setLevel('INFO')
+        self.logger.propagate = False
+    
     """ Reset game grid """
     def __resetGrid(self, auto_fill: bool=False):
         self.grid = []
@@ -97,7 +110,6 @@ class GameOfLife:
             self.grid.append([])
             for x in range(self.cols):
                 self.grid[y].append(0)
-
     
     """ Filler method. Add random X cells for each player """
     def __autoAddRoundCells(self):
@@ -154,6 +166,7 @@ class GameOfLife:
             for x in range(self.cols):
                 grid[y].append(self.__getCellNewStatus(x, y))
         self.grid = grid
+
     
     """ Set game winner """
     def __setWinner(self):
@@ -164,13 +177,16 @@ class GameOfLife:
             for x in range(self.cols):
                 if self.grid[y][x] > 0:
                     counts[self.grid[y][x]] += 1
-        self.winner = 0
+        self.__winner = 0
         for p in range(1, self.settings.players_number + 1):
-            if counts[p] > counts[self.winner]:
-                self.winner = p
-        # TODO: log winner message
+            if counts[p] > counts[self.__winner]:
+                self.__winner = p
     
     
     @property
     def IsOver(self) -> bool:
         return self.cur_round > self.settings.rounds_number
+    
+    @property
+    def Winner(self) -> str:
+        return 'Player {}'.format(self.__winner) if self.__winner > 0 else 'None'
