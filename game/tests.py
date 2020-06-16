@@ -6,7 +6,7 @@ from .logic import GameSettings, GameOfLife
 class GameOfLifeTestCase(TestCase):
     def setUp(self):
         self.game = GameOfLife(size=(10,6), settings=GameSettings(players_number=4, new_cells_per_round=20))
-
+    
     def test_getACCPNeighborsCount(self):
         self.__setManualGrid()
         neighbors_count = [

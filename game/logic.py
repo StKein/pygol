@@ -36,6 +36,16 @@ class GameSettings:
         
         if is_valid:
             super().__setattr__(name, val)
+    
+    def AttrName(self, name):
+        if name == 'players_number':
+            return "Players number"
+        elif name == 'generations_per_round':
+            return "Cell generations per round"
+        elif name == 'rounds_number':
+            return "Number of game rounds"
+        elif name == 'new_cells_per_round':
+            return "Cells to add on each round"
 
 
 import logging

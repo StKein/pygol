@@ -53,7 +53,7 @@ class GUI():
         grid_row = 0
         self.game_params_entries = {}
         for param in self.game_settings.__slots__:
-            Label(self.ng_window, text = param).grid(row = grid_row,column = 0)
+            Label(self.ng_window, text = self.game_settings.AttrName(param)).grid(row = grid_row,column = 0)
             param_entry = Entry(self.ng_window)
             param_entry.grid(row = grid_row, column = 1)
             param_entry.insert(0, self.game_settings.__getattribute__(param))
