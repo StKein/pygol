@@ -1,3 +1,6 @@
+""" Game logic module """
+
+""" Game settings """
 class GameSettings:
     __slots__ = ('players_number', 'rounds_number', 'generations_per_round', 'new_cells_per_round')
 
@@ -11,6 +14,7 @@ class GameSettings:
         self.rounds_number = rounds_number
         self.new_cells_per_round = new_cells_per_round
     
+    """ Overwrite setter for validation """
     def __setattr__(self, name, val):
         if not name in self.__slots__:
             return
@@ -32,12 +36,23 @@ class GameSettings:
         
         if is_valid:
             super().__setattr__(name, val)
+    
+    def AttrName(self, name):
+        if name == 'players_number':
+            return "Players number"
+        elif name == 'generations_per_round':
+            return "Cell generations per round"
+        elif name == 'rounds_number':
+            return "Number of game rounds"
+        elif name == 'new_cells_per_round':
+            return "Cells to add on each round"
 
 
 import logging
 import random
 import time
 
+""" Game logic """
 class GameOfLife:
     __slots__ = ('settings', 'cols', 'rows', 'grid', '__winner', 'logger',
                 'cur_round', 'cur_round_generation', 'cur_player', 'players_queue')
@@ -54,42 +69,38 @@ class GameOfLife:
         random.shuffle(self.players_queue)
         self.__setLogger()
     
+    """ Start game preparations """
     def Start(self):
-        """
-            Game startup preparations:
-                * create active grid
-                * set startup generation number
-        """
         self.logger.info('Game for {} players started'.format(self.settings.players_number))
         self.cur_round = 1
         self.cur_round_generation = 1
         self.__resetGrid()
     
+    """ Game move logic """
     def Move(self):
-        """
-            Game move
-            Generation step
-            Each player's cells make a move
-            Then the grid is refreshed to show new state
-        """
         # Just in case
         if self.IsOver:
             return
         
+        """ Each player's cells step to next generation """
         for p in self.players_queue:
             self.cur_player = p
             self.__playerMove()
         self.cur_round_generation += 1
+
+        """ Round generations ended - move to next round """
         if self.cur_round_generation > self.settings.generations_per_round:
             self.__setWinner()
             self.cur_round += 1
             self.cur_round_generation = 1
+            """ Or not (if all rounds complete) """
             if self.IsOver:
                 self.logger.info('Game over. {}'.format(self.Winner))
                 return
             self.logger.info('Round {} ended. Current leader: {}'.format(self.cur_round - 1, self.Winner))
             random.shuffle(self.players_queue)
     
+    """ Handler for adding cell on field """
     def AddCell(self, player: int, cell_x: int, cell_y: int) -> bool:
         if self.grid[cell_y][cell_x] != 0:
             return False
@@ -98,6 +109,7 @@ class GameOfLife:
         return True
     
 
+    """ Class logger setup """
     def __setLogger(self):
         self.logger = logging.getLogger('GameOfLife')
         handler = logging.FileHandler('logs/game.log')
@@ -113,19 +125,6 @@ class GameOfLife:
             self.grid.append([])
             for x in range(self.cols):
                 self.grid[y].append(0)
-    
-    """ Filler method. Add random X cells for each player """
-    def __autoAddRoundCells(self):
-        grid = self.grid
-        x = -1
-        y = -1
-        for player in self.players_queue:
-            for n in range(self.settings.new_cells_per_round):
-                while x == -1 or grid[y][x] != 0:
-                    x = random.randint(0, self.cols - 1)
-                    y = random.randint(0, self.rows - 1)
-                grid[y][x] = player
-        self.grid = grid
     
     # ACCP = Alive Cell of Current Player
     """ Get count of cell's neighbors that are ACCP """
