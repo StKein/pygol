@@ -34,17 +34,21 @@ class GameSettings:
             super().__setattr__(name, val)
 
 
+import random
 import time
 
 class GameOfLife:
     __slots__ = ('settings', 'cols', 'rows', 'grid', 'winner',
-                'cur_round', 'cur_round_generation', 'cur_player')
+                'cur_round', 'cur_round_generation', 'cur_player', 'players_queue')
 
     def __init__(self,
                 size: (int, int)=(30,20),
                 settings: GameSettings=GameSettings()):
         self.settings = settings
         self.cols, self.rows = size
+        self.players_queue = []
+        for p in range(1, self.settings.players_number + 1):
+            self.players_queue.append(p)
     
     def Start(self):
         """
@@ -55,6 +59,7 @@ class GameOfLife:
         self.cur_round = 1
         self.cur_round_generation = 1
         self.__resetGrid()
+        random.shuffle(self.players_queue)
         self.__autoAddRoundCells()
     
     def Move(self):
@@ -68,7 +73,7 @@ class GameOfLife:
         if self.IsOver:
             return
         
-        for p in range(1, self.settings.players_number + 1):
+        for p in self.players_queue:
             self.cur_player = p
             self.__playerMove()
         self.cur_round_generation += 1
@@ -79,7 +84,9 @@ class GameOfLife:
             if self.IsOver:
                 self.__setWinner()
                 return
+            # TODO: remove sleep when manual cells adding is implemented
             time.sleep(0.5)
+            random.shuffle(self.players_queue)
             self.__autoAddRoundCells()
     
 
@@ -90,14 +97,14 @@ class GameOfLife:
             self.grid.append([])
             for x in range(self.cols):
                 self.grid[y].append(0)
+
     
     """ Filler method. Add random X cells for each player """
     def __autoAddRoundCells(self):
-        import random
         grid = self.grid
         x = -1
         y = -1
-        for player in range(1, self.settings.players_number + 1):
+        for player in self.players_queue:
             for n in range(self.settings.new_cells_per_round):
                 while x == -1 or grid[y][x] != 0:
                     x = random.randint(0, self.cols - 1)
