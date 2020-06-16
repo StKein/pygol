@@ -6,10 +6,10 @@ class GameSettings:
                 generations_per_round: int=10,
                 rounds_number = 10,
                 new_cells_per_round: int=20):
-        self.players_number = players_number if 1 <= players_number <= 5 else 2
-        self.generations_per_round = generations_per_round if 0 < generations_per_round <= 50 else 10
-        self.rounds_number = rounds_number if 1 <= rounds_number <= 30 else 10
-        self.new_cells_per_round = new_cells_per_round if 10 <= new_cells_per_round <= 100 else 20
+        self.players_number = players_number
+        self.generations_per_round = generations_per_round
+        self.rounds_number = rounds_number
+        self.new_cells_per_round = new_cells_per_round
     
     def __setattr__(self, name, val):
         if not name in self.__slots__:
@@ -28,7 +28,7 @@ class GameSettings:
         elif name == 'rounds_number':
             is_valid = 1 <= val <= 30
         elif name == 'new_cells_per_round':
-            is_valid = 10 <= val <= 100
+            is_valid = 5 <= val <= 100
         
         if is_valid:
             super().__setattr__(name, val)
@@ -51,6 +51,7 @@ class GameOfLife:
         self.players_queue = []
         for p in range(1, self.settings.players_number + 1):
             self.players_queue.append(p)
+        random.shuffle(self.players_queue)
         self.__setLogger()
     
     def Start(self):
@@ -63,8 +64,6 @@ class GameOfLife:
         self.cur_round = 1
         self.cur_round_generation = 1
         self.__resetGrid()
-        random.shuffle(self.players_queue)
-        self.__autoAddRoundCells()
     
     def Move(self):
         """
@@ -89,10 +88,14 @@ class GameOfLife:
                 self.logger.info('Game over. Winner: {}'.format(self.Winner))
                 return
             self.logger.info('Round {} ended. Current leader: {}'.format(self.cur_round - 1, self.Winner))
-            # TODO: remove sleep when manual cells adding is implemented
-            time.sleep(0.5)
             random.shuffle(self.players_queue)
-            self.__autoAddRoundCells()
+    
+    def AddCell(self, player: int, cell_x: int, cell_y: int) -> bool:
+        if self.grid[cell_y][cell_x] != 0:
+            return False
+        
+        self.grid[cell_y][cell_x] = player
+        return True
     
 
     def __setLogger(self):
@@ -104,7 +107,7 @@ class GameOfLife:
         self.logger.propagate = False
     
     """ Reset game grid """
-    def __resetGrid(self, auto_fill: bool=False):
+    def __resetGrid(self):
         self.grid = []
         for y in range(self.rows):
             self.grid.append([])
