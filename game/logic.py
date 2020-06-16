@@ -10,6 +10,28 @@ class GameSettings:
         self.generations_per_round = generations_per_round if 0 < generations_per_round <= 50 else 10
         self.rounds_number = rounds_number if 1 <= rounds_number <= 30 else 10
         self.new_cells_per_round = new_cells_per_round if 10 <= new_cells_per_round <= 100 else 20
+    
+    def __setattr__(self, name, val):
+        if not name in self.__slots__:
+            return
+        
+        try:
+            val = int(val)
+        except ValueError:
+            return
+        
+        is_valid = False
+        if name == 'players_number':
+            is_valid = 1 <= val <= 5
+        elif name == 'generations_per_round':
+            is_valid = 1 <= val <= 50
+        elif name == 'rounds_number':
+            is_valid = 1 <= val <= 30
+        elif name == 'new_cells_per_round':
+            is_valid = 10 <= val <= 100
+        
+        if is_valid:
+            super().__setattr__(name, val)
 
 
 import time
@@ -23,10 +45,6 @@ class GameOfLife:
                 settings: GameSettings=GameSettings()):
         self.settings = settings
         self.cols, self.rows = size
-        # if field is too small, increase it
-        while self.cols * self.rows < self.settings.players_number * self.settings.new_cells_per_round:
-            self.cols += 1
-            self.rows += 1
     
     def Start(self):
         """
