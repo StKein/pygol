@@ -1,7 +1,8 @@
+""" Tests module """
 from django.test import TestCase
 from .logic import GameSettings, GameOfLife
 
-# Create your tests here.
+
 class GameOfLifeTestCase(TestCase):
     def setUp(self):
         self.game = GameOfLife(size=(10,6), settings=GameSettings(players_number=4, new_cells_per_round=20))

@@ -1,9 +1,12 @@
+""" UI module """
+
 import os
 import pygame
 from pygame.locals import MOUSEBUTTONDOWN, QUIT
 from tkinter import Tk, Menu, Frame, Toplevel, Label, Entry, Button
 from logic import GameSettings, GameOfLife
 
+""" GUI class """
 class GUI():
 
     def __init__(self):
@@ -22,6 +25,7 @@ class GUI():
         self.root.config(menu=menu)
         self.menu = menu
     
+    """ Run application """
     def Run(self):
         frame = Frame(self.root, width=self.width, height=self.height)
         frame.pack()
@@ -39,6 +43,7 @@ class GUI():
             self.root.update()
     
 
+    """ Popup for new game settings setup """
     def __newGamePopup(self):
         if self.game_in_process:
             return
@@ -57,6 +62,7 @@ class GUI():
         Button(self.ng_window, text="Start", command=self.__newGame).grid(row = grid_row, column = 0)
         Button(self.ng_window, text="Close", command=self.ng_window.destroy).grid(row = grid_row, column = 1)
     
+    """ Start new game """
     def __newGame(self):
         self.__setGameSettings()
         self.__setupNewGame()
@@ -68,7 +74,7 @@ class GUI():
         self.__drawGrid()
         self.game_in_process = True
         while self.game_in_process:
-            # Start of new round
+            """ On start of every new round players need to add cells """
             if self.game.cur_round_generation == 1:
                 self.__addNewCells()
                 self.__setStatus('Round {}'.format(self.game.cur_round))
@@ -83,6 +89,7 @@ class GUI():
             self.__refreshFrame()
         self.__setStatus(self.game.Winner)
     
+    """ Set game settings from popup """
     def __setGameSettings(self):
         for param in self.game_params_entries:
             self.game_settings.__setattr__(param, self.game_params_entries[param].get())
@@ -107,20 +114,25 @@ class GUI():
             for x in range(self.game.cols):
                 self.__drawCell(self.game.grid[y][x], x, y)
     
+    """ Draw cell for player """
     def __drawCell(self, player, x, y):
         pygame.draw.rect(self.screen,
                         self.__getCellColor(player),
                         (x*self.cell_size, y*self.cell_size, self.cell_size, self.cell_size))
     
+    """ Get cell color, depending on its state """
     def __getCellColor(self, cell_value):
+        """ 0 = Dead, 1-5 = Player cell """
         colors = ['black', 'red', 'green', 'blue', 'yellow', 'purple']
         return pygame.Color(colors[cell_value])
     
+    """ Exit application """
     def __appQuit(self):
         self.app_running = False
         self.game_in_process = False
         pygame.quit()
     
+    """ Adding cells cycle """
     def __addNewCells(self):
         self.__drawLines(True)
         for p in self.game.players_queue:
@@ -138,9 +150,11 @@ class GUI():
                                             (x*self.cell_size, y*self.cell_size, self.cell_size, self.cell_size))
                 self.__refreshFrame()
     
+    """ Show current game status so that no one has to guess """
     def __setStatus(self, status):
         self.menu.entryconfigure(4, label=status)
     
+    """ Refresh frame (tk and pygame) """
     def __refreshFrame(self):
         pygame.display.flip()
         self.root.update_idletasks()
