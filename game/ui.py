@@ -1,7 +1,7 @@
 import os
 import pygame
 from pygame.locals import QUIT
-from tkinter import Tk, Menu, Frame
+from tkinter import Tk, Menu, Frame, Toplevel, Label, Entry, Button
 from logic import GameSettings, GameOfLife
 
 class GUI():
@@ -12,7 +12,7 @@ class GUI():
         self.root = Tk()
         self.root.title('Game of Life')
         menu = Menu(self.root)
-        menu.add_command(label='New game', command=self.NewGame)
+        menu.add_command(label='New game', command=self.__newGamePopup)
         menu.add_command(label='Exit', command=self.__appQuit)
         self.root.config(menu=menu)
     
@@ -24,15 +24,35 @@ class GUI():
         pygame.init()
         self.screen = pygame.display.set_mode((self.width, self.height))
         self.root.protocol('WM_DELETE_WINDOW', self.__appQuit)
+        self.game_settings = GameSettings(players_number=5, new_cells_per_round=50)
+        self.ng_window = None
         self.app_running = True
         while self.app_running:
             self.root.update_idletasks()
             self.root.update()
     
-    def NewGame(self):
+
+    def __newGamePopup(self):
+        if not self.ng_window is None:
+            self.ng_window.destroy()
+        self.ng_window = Toplevel(self.root)
+        grid_row = 0
+        self.game_params_entries = {}
+        for param in self.game_settings.__slots__:
+            Label(self.ng_window, text = param).grid(row = grid_row,column = 0)
+            param_entry = Entry(self.ng_window)
+            param_entry.grid(row = grid_row, column = 1)
+            param_entry.insert(0, self.game_settings.__getattribute__(param))
+            self.game_params_entries[param] = param_entry
+            grid_row += 1
+        Button(self.ng_window, text="Start", command=self.__newGame).grid(row = grid_row, column = 0)
+        Button(self.ng_window, text="Close", command=self.ng_window.destroy).grid(row = grid_row, column = 1)
+    
+    def __newGame(self):
         self.__setGameSettings()
         self.__setupNewGame()
         clock = pygame.time.Clock()
+        self.ng_window.destroy()
         self.__drawLines()
         self.game.Start()
         self.__drawGrid()
@@ -54,10 +74,9 @@ class GUI():
             self.root.update_idletasks()
             self.root.update()
     
-    
     def __setGameSettings(self):
-        # TODO: modify 'new game' button for game settings popup before start
-        self.game_settings = GameSettings(players_number=5, new_cells_per_round=50)
+        for param in self.game_params_entries:
+            self.game_settings.__setattr__(param, self.game_params_entries[param].get())
     
     """ Create new app game """
     def __setupNewGame(self):
