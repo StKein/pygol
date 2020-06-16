@@ -23,10 +23,6 @@ class GameOfLife:
                 settings: GameSettings=GameSettings()):
         self.settings = settings
         self.cols, self.rows = size
-        # if field is too small, increase it
-        while self.cols * self.rows < self.settings.players_number * self.settings.new_cells_per_round:
-            self.cols += 1
-            self.rows += 1
     
     def Start(self):
         """

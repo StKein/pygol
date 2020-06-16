@@ -1,82 +1,79 @@
-import abc
-from logic import GameOfLife
-
-class UI(abc.ABC):
-
-    def __init__(self, game: GameOfLife):
-        self.game = game
-    
-    def run(self):
-        pass
-
-
+import os
 import pygame
-from pygame.locals import *
+from pygame.locals import QUIT
+from tkinter import Tk, Menu, Frame
+from logic import GameSettings, GameOfLife
 
-class GUI(UI):
+class GUI():
 
-    def __init__(self,
-                game: GameOfLife,
-                cell_size: int=20,
-                speed: int=10):
-        self.game = game
-        self.cell_size = cell_size if 10 <= cell_size <= 40 else 20
-        self.width = self.game.cols * self.cell_size
-        self.height = self.game.rows * self.cell_size
-        self.screen = pygame.display.set_mode((self.width, self.height))
-        self.speed = speed
-
-        super().__init__(game)
+    def __init__(self):
+        self.width = 640
+        self.height = 480
+        self.root = Tk()
+        self.root.title('Game of Life')
+        menu = Menu(self.root)
+        menu.add_command(label='New game', command=self.NewGame)
+        menu.add_command(label='Exit', command=self.__appQuit)
+        self.root.config(menu=menu)
     
     def Run(self):
-        """
-            TODO:
-                * make manual startup cells creation
-                * make new game event
-                * don't close window when game ends
-                * print endgame message
-        """
+        frame = Frame(self.root, width=self.width, height=self.height)
+        frame.pack()
+        os.environ['SDL_WINDOWID'] = str(frame.winfo_id())
+        self.root.update()
         pygame.init()
+        self.screen = pygame.display.set_mode((self.width, self.height))
+        self.root.protocol('WM_DELETE_WINDOW', self.__appQuit)
+        self.app_running = True
+        while self.app_running:
+            self.root.update_idletasks()
+            self.root.update()
+    
+    def NewGame(self):
+        self.__setGameSettings()
+        self.__setupNewGame()
         clock = pygame.time.Clock()
-        pygame.display.set_caption('Game of Life')
-        self.screen.fill(pygame.Color('white'))
         self.__drawLines()
         self.game.Start()
         self.__drawGrid()
-        running = True
-        paused = False
-        while running:
+        self.game_in_process = True
+        while self.game_in_process:
             for event in pygame.event.get():
                 # event.type == MOUSEBUTTONDOWN; event.pos: (x,y)
-                if event.type == KEYDOWN and event.key == 112:
-                    paused = not paused
                 if event.type == QUIT:
-                    pygame.quit()
+                    self.__appQuit()
                     return
-            if not paused:
-                self.game.Move()
-                self.__drawGrid()
-                self.__drawLines()
-                pygame.display.flip()
-                clock.tick(self.speed)
-                #running = not self.game.IsOver
-        pygame.quit()
+            self.game.Move()
+            self.__drawGrid()
+            self.__drawLines()
+            pygame.display.flip()
+            self.root.update_idletasks()
+            self.root.update()
+            clock.tick(self.speed)
+            self.game_in_process = not self.game.IsOver
+            self.root.update_idletasks()
+            self.root.update()
     
-
+    
+    def __setGameSettings(self):
+        # TODO: modify 'new game' button for game settings popup before start
+        self.game_settings = GameSettings(players_number=5, new_cells_per_round=50)
+    
+    """ Create new app game """
+    def __setupNewGame(self):
+        self.cell_size = 20
+        self.speed = 10
+        self.game = GameOfLife(size=(int(self.width / self.cell_size), int(self.height / self.cell_size)), settings=self.game_settings)
+    
+    """ Draw lines to outline cells """
     def __drawLines(self):
-        """
-            Draw lines to outline cells
-        """
         for x in range(0, self.width, self.cell_size):
             pygame.draw.line(self.screen, pygame.Color('black'), (x, 0), (x, self.height))
         for y in range(0, self.height, self.cell_size):
             pygame.draw.line(self.screen, pygame.Color('black'), (0, y), (self.width, y))
     
+    """ Paint game grid to show its current state """
     def __drawGrid(self):
-        """
-            Paint grid to show board current state
-        """
-        color = ""
         for y in range(self.game.rows):
             for x in range(self.game.cols):
                 pygame.draw.rect(self.screen,
@@ -86,3 +83,8 @@ class GUI(UI):
     def __getCellColor(self, cell_value):
         colors = ['black', 'red', 'green', 'blue', 'yellow', 'purple']
         return pygame.Color(colors[cell_value])
+    
+    def __appQuit(self):
+        self.app_running = False
+        self.game_in_process = False
+        pygame.quit()
